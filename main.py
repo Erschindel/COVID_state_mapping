@@ -35,7 +35,7 @@ class Map ():
         if day.month == 1 and day.day == 1:
             return f"12/31/{int(day.strftime('%y')) - 1}"
         elif day.day == 1:
-            yesterday = calendar.monthrange(day.year, day.month - 1)[0]
+            yesterday = calendar.monthrange(day.year, day.month - 1)[1]
             return day.strftime(f"{day.month - 1}/{yesterday}/%y")
         else:
             return day.strftime(f"%m/{day.day - 1}/%y")
@@ -44,7 +44,7 @@ class Map ():
         # data might not yet be updated that day, so try/except
         try:
             date_used = self.today.strftime("%m/%d/%y")
-            newest_data = self.data[date_str].tolist() # bad date fails here
+            newest_data = self.data[date_used].tolist() # bad date fails here
         except:
             date_used = self.prior_day(self.today)
             newest_data = self.data[date_used].tolist()
@@ -130,6 +130,7 @@ def run():
         to_plot = Map(user_state.title())
     to_plot.plot_day_change()
 
+    print(f"Latest data from {to_plot.date_used}")
     print("Day change of confirmed cases shown.")
     show_day_change = input("Show totals? (y/n): ")
     if show_day_change.lower() == "y":
