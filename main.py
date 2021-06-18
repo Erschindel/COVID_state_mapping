@@ -1,5 +1,4 @@
 import datetime
-import calendar
 
 import pandas as pd
 import numpy as np
@@ -11,7 +10,7 @@ class Map ():
         self.state = state
         self.data = self.update_data()
         self.postal = self.get_postal()
-        self.today = datetime.datetime.now()
+        self.today = datetime.datetime.now() #(2020, 10, 13, 23, 50, 18, 884118)
         self.date_used = self.get_fips_and_covid()[0] # depending on time of day, not necessarily today's date
         self.fips = self.get_fips_and_covid()[1]
         self.newest_data = self.get_fips_and_covid()[2]
@@ -29,30 +28,34 @@ class Map ():
         df = pd.read_csv("data/state_codes.csv")
         return df[df["State"] == self.state]["Postal"].iloc[0]
 
+    def fix_zero_padding_month(self, date):
+        # The %-m flag is meant to remove the zero-padding from the month,
+        # but that doesn't work here for some reason. Below is the fix
+        if list(date)[0] == "0":
+            date = "".join(list(date)[1:])
+        return date
+
     def prior_day(self, day):
         # account for month/year changes
         # day is a datetime object
-        if day.month == 1 and day.day == 1:
-            return f"12/31/{int(day.strftime('%y')) - 1}"
-        elif day.day == 1:
-            yesterday = calendar.monthrange(day.year, day.month - 1)[1]
-            return day.strftime(f"{day.month - 1}/{yesterday}/%y")
-        else:
-            return day.strftime(f"%m/{day.day - 1}/%y")
+        yest = day - datetime.timedelta(days=1)
+        return yest.strftime(f"%m/{day.day - 1}/%y")
 
     def get_fips_and_covid(self):
         # data might not yet be updated that day, so try/except
         try:
-            date_used = self.today.strftime("%m/%d/%y")
+            date_used = self.fix_zero_padding_month(self.today.strftime("%m/%d/%y"))
             newest_data = self.data[date_used].tolist() # bad date fails here
         except:
-            date_used = self.prior_day(self.today)
+            date_used = self.fix_zero_padding_month(self.prior_day(self.today))
+            # if list(date_used)[0] == "0":
+            #     date_used = "".join(list(date_used)[1:])
             newest_data = self.data[date_used].tolist()
 
-        date_prior = self.prior_day(datetime.datetime.strptime(date_used, "%m/%d/%y"))
+        date_prior = self.fix_zero_padding_month(self.prior_day(datetime.datetime.strptime(date_used, "%m/%d/%y")))
         # check for duplicated columns, ex Michigan
         if all(self.data[date_used] == self.data[date_prior]):
-            two_days_back = self.prior_day(datetime.datetime.strptime(date_prior, "%m/%d/%y"))
+            two_days_back = self.fix_zero_padding_month(self.prior_day(datetime.datetime.strptime(date_prior, "%m/%d/%y")))
             prior_data = self.data[two_days_back].tolist()
         else:
             prior_data = self.data[date_prior].tolist()
